@@ -11,19 +11,23 @@
 <body>
     <h3>Project decibel</h3>
     <button id="startMicrophoneBtn" type="button">Start using microphone</button>
-    <button id="stopMicrophoneBtn" type="button">Stop using microphone</button>
+    <button id="stopMicrophoneBtn" type="button" disabled>Stop using microphone</button>
     <script>
         const startMicrophoneBtn = document.getElementById('startMicrophoneBtn');
+        const stopMicrophoneBtn = document.getElementById('stopMicrophoneBtn');
         const context = new AudioContext();
         startMicrophoneBtn.addEventListener('click', async function () {
-            await initializeAudio()
+            await initializeAudio();
+            stopMicrophoneBtn.disabled = false;
+            console.log("Your microphone audio is being used.");
         }, { once: true });
+        let micStream;
         async function initializeAudio() {
             // autoplay policy
             if (context.state == "suspended") {
                 await context.resume();
             }
-            const micStream = await navigator.mediaDevices.getUserMedia({
+            micStream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     echoCancellation: false,
                     autoGainControl: false,
@@ -47,12 +51,22 @@
         }
 
         async function setupRecordingWorkletNode(recordingProperties) {
+            // Load and execute the module script.
             await context.audioWorklet.addModule('recording-processor.js');
-            const workletRecordingNode = new AudioWorkletNode(context, 'recording-processor', {
+            // Create an AudioWorkletNode. The name of the processor is the
+            // one passed to registerProcessor() in the module script.
+            const WorkletRecordingNode = new AudioWorkletNode(context, 'recording-processor', {
                 processorOptions: recordingProperties
             });
-            return workletRecordingNode;
+            return WorkletRecordingNode;
         }
+    </script>
+    <script>
+        stopMicrophoneBtn.addEventListener('click', function () {
+            // Stop the stream.
+            micStream.getTracks().forEach(track => track.stop());
+            console.log("Your microphone audio is not used anymore.");
+        });
     </script>
 </body>
 
